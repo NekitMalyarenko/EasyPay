@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 package main
 
 import (
@@ -8,18 +7,16 @@ import (
 	"encoding/json"
 	"errors"
 	"handlers"
-	"services"
 )
 
 var methodHandlers map[string]func(input map[string]interface{})string
 
 
 func main() {
-	/*initHandlers()
+	initHandlers()
 
 	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)*/
-	services.TestUpload()
+	http.ListenAndServe(":8080", nil)
 }
 
 
@@ -64,6 +61,3 @@ func initHandlers() {
 	methodHandlers = make(map[string]func(input map[string]interface{})string)
 	methodHandlers["test"] = handlers.TempHandler
 }
-=======
-package src
->>>>>>> 795444dbc66d9becfc8c535fcd054441f7dc3f23
