@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"handlers"
+	"db"
 )
 
 var methodHandlers map[string]func(input map[string]interface{})string
@@ -15,12 +16,15 @@ var methodHandlers map[string]func(input map[string]interface{})string
 func main() {
 	initHandlers()
 
-	http.HandleFunc("/", handler)
-	http.ListenAndServe(":8080", nil)
+	db.GetInstance()
+
+	http.HandleFunc("/", Handle)
+	go http.ListenAndServe(":8080", nil)
 }
 
 
-func handler(w http.ResponseWriter, r *http.Request) {
+func Handle(w http.ResponseWriter, r *http.Request) {
+	log.Println(r.Body)
 	input, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -28,7 +32,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var parsedInput map[string]interface{}
-	err = json.Unmarshal(input, parsedInput)
+	err = json.Unmarshal(input, &parsedInput)
 	if err != nil {
 		log.Println(err)
 		w.Write([]byte("json parsing error"))
@@ -37,7 +41,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	if parsedInput["method_name"] != nil {
 		methodName := parsedInput["method_name"].(string)
 		var methodData map[string]interface{}
-		err = json.Unmarshal([]byte(parsedInput["method_data"].(string)), methodData)
+		err = json.Unmarshal([]byte(parsedInput["method_data"].(string)), &methodData)
 		if err != nil {
 			log.Println(err)
 			w.Write([]byte("error parsing method data"))
@@ -59,5 +63,7 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 func initHandlers() {
 	methodHandlers = make(map[string]func(input map[string]interface{})string)
-	methodHandlers["test"] = handlers.TempHandler
+	methodHandlers["healthTest"] = handlers.TempHandler
+	methodHandlers["userLogin"] = handlers.UserLogin
+	methodHandlers["userRegister"] = handlers.UserRegister
 }
