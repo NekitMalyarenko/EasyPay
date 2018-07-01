@@ -1,4 +1,4 @@
-package test
+package main
 
 import (
 	"net/http"
@@ -19,16 +19,16 @@ func main() {
 	db.GetInstance()
 
 	http.HandleFunc("/", Handle)
-	go http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", nil)
 }
 
 
 func Handle(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.Body)
 	input, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
 		w.Write([]byte("error"))
+		return
 	}
 
 	var parsedInput map[string]interface{}
@@ -36,28 +36,31 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Println(err)
 		w.Write([]byte("json parsing error"))
+		return
 	}
+
+	log.Println("imput data:", parsedInput)
 
 	if parsedInput["method_name"] != nil {
 		methodName := parsedInput["method_name"].(string)
-		var methodData map[string]interface{}
-		err = json.Unmarshal([]byte(parsedInput["method_data"].(string)), &methodData)
-		if err != nil {
-			log.Println(err)
-			w.Write([]byte("error parsing method data"))
-		}
+		var methodData = parsedInput["method_data"].(map[string]interface{})
 
 		if methodHandlers[methodName] != nil {
-			w.Write([]byte(methodHandlers[methodName](methodData)))
+			response := methodHandlers[methodName](methodData)
+			log.Println("response:", response)
+			w.Write([]byte(response))
 		} else {
 			log.Println(errors.New("no such method error"))
 			w.Write([]byte("no such method error"))
+			return
 		}
 	} else {
 		log.Println(errors.New("method_name is empty error"))
 		w.Write([]byte("method_name is empty error"))
+		return
 	}
 
+	//w.WriteHeader(200)
 }
 
 
@@ -66,4 +69,5 @@ func initHandlers() {
 	methodHandlers["healthTest"] = handlers.TempHandler
 	methodHandlers["userLogin"] = handlers.UserLogin
 	methodHandlers["userRegister"] = handlers.UserRegister
+	methodHandlers["hasUserWithEmail"] = handlers.HasUserWithEmail
 }

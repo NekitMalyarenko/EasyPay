@@ -14,9 +14,17 @@ const (
 )
 
 
-func (*Users) GetUser(phoneNumber string) *types.User {
+func (*Users) GetUser(email string) (*types.User, error) {
+	var user *types.User
 
-	return nil
+	res := currentInstance.instance.Collection(usersTable).Find(db.Cond{"email": email})
+	err := res.One(&user)
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	return user, nil
 }
 
 
@@ -27,17 +35,15 @@ func (*Users) AddUser(user *types.User) error {
 }
 
 
-func (*Users) HasUser(phoneNumber string) bool {
-	var users []*types.User
-
-	res := currentInstance.instance.Collection(usersTable).Find(db.Cond{"phone_number": phoneNumber})
-	err := res.All(&users)
+func (db *Users) HasUser(email string) (bool, error) {
+	user, err := db.GetUser(email)
 	if err != nil {
-		log.Println(err)
-		return false
+		return false, err
+	} else if user != nil {
+		return true, nil
+	} else {
+		return false, nil
 	}
-
-	return len(users) != 0
 }
 
 
