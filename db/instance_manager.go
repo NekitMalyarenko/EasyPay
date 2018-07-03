@@ -10,6 +10,7 @@ import (
 type dbService struct {
 	instance sqlbuilder.Database
 	Users
+	Verification
 }
 
 

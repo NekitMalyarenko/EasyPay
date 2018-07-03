@@ -9,3 +9,10 @@ type User struct {
 	Password    string `db:"password"`
 	Image       string `db:"image"`
 }
+
+type Verification struct {
+	Id               int64  `db:"id,omitempty"`
+	PhoneNumber      string `db:"phone_number"`
+	VerificationCode int64  `db:"verification_code"`
+	IsVerified       bool   `db:"is_verified"`
+}

@@ -7,19 +7,21 @@ import (
 	"encoding/json"
 	"errors"
 	"handlers"
-	"db"
+	"services"
 )
 
 var methodHandlers map[string]func(input map[string]interface{})string
 
 
 func main() {
-	initHandlers()
+	/*initHandlers()
 
 	db.GetInstance()
 
 	http.HandleFunc("/", Handle)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":8080", nil)*/
+
+	services.SendSMS("test", "380967519036")
 }
 
 
