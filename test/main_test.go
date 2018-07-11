@@ -2,12 +2,12 @@ package test
 
 import (
 	_"io/ioutil"
-	"testing"
 	"log"
+	"encoding/json"
+	"testing"
 	"net/http"
 	"bytes"
 	"net/http/httptest"
-	"encoding/json"
 )
 
 type requestData struct {
@@ -49,7 +49,7 @@ func TestUserRegister(t *testing.T) {
 }
 
 
-/*func TestUserLogin(t *testing.T) {
+func TestUserLogin(t *testing.T) {
 	requestData := requestData{
 		methodName  : "userLogin",
 		requestData : map[string]interface{} {
@@ -60,7 +60,7 @@ func TestUserRegister(t *testing.T) {
 	}
 	res := sendRequest(requestData, t)
 	log.Println(res)
-}*/
+}
 
 
 func sendRequest(requestData requestData, t *testing.T) string {
@@ -88,14 +88,9 @@ func sendRequest(requestData requestData, t *testing.T) string {
 
 
 func (data *requestData) toString() string{
-	parsedRequestData, err := json.Marshal(data.requestData)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	result, err := json.Marshal(map[string]interface{}{
 		"method_name" : data.methodName,
-		"method_data" : string(parsedRequestData),
+		"method_data" : data.requestData,
 	})
 	if err != nil {
 		log.Fatal(err)

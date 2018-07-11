@@ -9,8 +9,10 @@ import (
 
 type dbService struct {
 	instance sqlbuilder.Database
-	Users
+	Customers
+	Sellers
 	Verification
+	Transactions
 }
 
 

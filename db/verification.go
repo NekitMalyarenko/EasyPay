@@ -14,27 +14,28 @@ const (
 )
 
 
-func (*Verification) CreateVerification(phoneNumber string, code int64) error {
+func (*Verification) CreateVerification(phoneNumber string, code int64,time string) error {
 	_, err := currentInstance.instance.
 		InsertInto(verificationTable).Values(types.Verification{
 			PhoneNumber      : phoneNumber,
 			IsVerified       : false,
 			VerificationCode : code,
+			StartTime        : time,
 	}).Exec()
 	return err
 }
 
 
-func (*Verification) GetVerification(phoneNumber string) (*types.Verification, error) {
+func (*Verification) GetVerification(phoneNumber string) (*types.Verification) {
 	res := currentInstance.instance.Collection(verificationTable).Find(db.Cond{
 		"phone_number" : phoneNumber,
 	})
 
 	var verification *types.Verification
 	if res.Next(&verification) {
-		return verification, nil
+		return verification
 	} else {
-		return nil, errors.New("no such verification data")
+		return nil
 	}
 }
 
@@ -46,11 +47,9 @@ func (*Verification) Verify(phoneNumber string) error {
 
 	var verification types.Verification
 	if res.Next(&verification) {
-		err := res.Update(map[string]interface{}{
+		return res.Update(map[string]interface{}{
 			"is_verified" : true,
 		})
-
-		return err
 	} else {
 		return errors.New("no verification data")
 	}
@@ -68,4 +67,10 @@ func (*Verification) IsVerified(phoneNumber string) (bool, error) {
 	} else {
 		return false, errors.New("no verification data")
 	}
+}
+
+
+func (*Verification) DeleteVerification(phoneNumber string) error{
+	return currentInstance.instance.Collection(verificationTable).Find(db.Cond{
+		"phone_number" : phoneNumber}).Delete()
 }
