@@ -20,6 +20,12 @@ type Seller struct {
 	Image       string `db:"image"`
 }
 
+
+type User struct {
+	*Customer
+	*Seller
+}
+
 type Verification struct {
 	Id               int64  `db:"id,omitempty"`
 	PhoneNumber      string `db:"phone_number"`
@@ -35,7 +41,7 @@ type Transaction struct {
 	Products         string `db:"products"`
 	TotalPrice       int    `db:"total_price"`
 	Date             string `db:"date"`
-	VerificationCode int64    `db:"verification_code"`
+	VerificationCode int64  `db:"verification_code"`
 }
 
 type Shop struct {

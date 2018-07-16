@@ -1,15 +1,38 @@
 package handlers
 
 import (
-	"db"
-	"log"
 	"encoding/json"
+	"types"
 )
 
 
-func UserLogin(inputData map[string]interface{}) string {
+func UserLogin(inputData map[string]interface{}) (string, error) {
+	user := inputData["user"].(*types.User)
+	var response []byte
 
-	if inputData["phone_number"] != nil && inputData["password"] != nil {
+	if user.Customer != nil && user.Seller == nil {
+		response, _ = json.Marshal(map[string]interface{}{
+			"status" : "ok",
+			"first_name" : user.Customer.FirstName,
+			"last_name" : user.Customer.LastName,
+			"image" : user.Customer.Image,
+			"account_type" : 0,
+		})
+
+	} else if user.Seller != nil && user.Customer == nil {
+		response, _ = json.Marshal(map[string]interface{}{
+			"status" : "ok",
+			"first_name" : user.Seller.FirstName,
+			"last_name" : user.Seller.LastName,
+			"image" : user.Seller.Image,
+			"description" : user.Seller.Description,
+			"account_type" : 1,
+		})
+	}
+
+	return string(response), nil
+
+	/*if inputData["phone_number"] != nil && inputData["password"] != nil {
 		customer, err := db.GetInstance().Customers.GetCustomer(inputData["phone_number"].(string))
 		if err != nil {
 			log.Println(err)
@@ -59,6 +82,5 @@ func UserLogin(inputData map[string]interface{}) string {
 
 	} else {
 		return myErrors[argumentsError]
-	}
+	}*/
 }
-

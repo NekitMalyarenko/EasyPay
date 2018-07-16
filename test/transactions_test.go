@@ -11,8 +11,8 @@ func TestTransactionAdd(t *testing.T){
 	requestData := requestData{
 		methodName : "addTransaction",
 		requestData : map[string]interface{}{
-			"phone_number" : "380671779808",
-			"password" : "hottabych98",
+			"phone_number" : "380967519036",
+			"password" : "1234",
 			"transaction" : map[string] interface{}{
 				"products" : []map[string]interface{}{
 					{
@@ -20,16 +20,12 @@ func TestTransactionAdd(t *testing.T){
 						"quantity" : 1,
 					},
 					{
-						"product_id" : 1,
-						"quantity" : 2,
-					},
-					{
-						"product_id" : 4,
-						"quantity" : 1,
+						"product_id" : 3,
+						"quantity" : 4,
 					},
 				},
 			},
-			"shop_id" : 1,
+			"shop_id" : 2,
 		},
 		path : "/",
 	}
@@ -46,7 +42,7 @@ func TestGetOldestTransactions(t *testing.T){
 			"password": "hottabych98",
 			"account_type" : 0,
 			"number_of_transactions": 2,
-			"transaction_id" : 9,
+			"transaction_id" : 13,
 		},
 		path: "/",
 	}
@@ -59,10 +55,10 @@ func TestGetNewestTransactions(t *testing.T){
 	requestData:= requestData{
 		methodName:"getNewestTransactions",
 		requestData:map[string]interface{}{
-			"phone_number": "380671779808",
-			"password": "hottabych98",
+			"phone_number": "380967519036",
+			"password": "1234",
 			"account_type" : 0,
-			"last_transaction_id" : 7,
+			"last_transaction_id" : 12,
 		},
 		path: "/",
 	}

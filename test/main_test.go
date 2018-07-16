@@ -33,36 +33,6 @@ func TestHealth(t *testing.T) {
 }
 
 
-func TestUserRegister(t *testing.T) {
-	requestData := requestData{
-		methodName  : "userRegister",
-		requestData : map[string]interface{} {
-			"first_name" : "Nikita2",
-			"last_name" : "Maliarenko2",
-			"email" : "n.a.m.62608@gmail.com",
-			"password" : "12345",
-		},
-		path : "/",
-	}
-	res := sendRequest(requestData, t)
-	log.Println(res)
-}
-
-
-func TestUserLogin(t *testing.T) {
-	requestData := requestData{
-		methodName  : "userLogin",
-		requestData : map[string]interface{} {
-			"email" : "n.a.m.62608@gmail.com",
-			"password" : "1234",
-		},
-		path : "/",
-	}
-	res := sendRequest(requestData, t)
-	log.Println(res)
-}
-
-
 func sendRequest(requestData requestData, t *testing.T) string {
 	req, err := http.NewRequest("POST", requestData.path, bytes.NewBuffer([]byte(requestData.toString())))
 	if err != nil {
@@ -85,6 +55,7 @@ func sendRequest(requestData requestData, t *testing.T) string {
 	// Check the response body is what we expect.
 	return rr.Body.String()
 }
+
 
 
 func (data *requestData) toString() string{

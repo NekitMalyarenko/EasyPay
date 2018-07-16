@@ -1,13 +1,17 @@
 package test
 
+import (
+	"testing"
+	"log"
+)
 
-/*func TestCreateVerification(t *testing.T) {
+func TestCreateVerification(t *testing.T) {
 	initHandlers()
 
 	requestData := requestData{
 		methodName  : "startVerification",
 		requestData : map[string]interface{} {
-			"phone_number" : "380967519036",
+			"phone_number" : "380967519035",
 		},
 		path : "/",
 	}
@@ -22,11 +26,11 @@ func TestVerify(t *testing.T) {
 	requestData := requestData{
 		methodName  : "verifyPhone",
 		requestData : map[string]interface{} {
-			"phone_number" : "380967519036",
-			"verification_code" : "79410",
+			"phone_number" : "380967519035",
+			"verification_code" : 61807,
 		},
 		path : "/",
 	}
 	res := sendRequest(requestData, t)
 	log.Println(res)
-}*/
+}

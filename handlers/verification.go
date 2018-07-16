@@ -2,76 +2,57 @@ package handlers
 
 import (
 	"db"
-	"log"
-	"math/rand"
-	"encoding/json"
 	"time"
-	"strconv"
+	"my_errors"
+	"encoding/json"
+	"services"
 )
 
 
-func StartVerification(inputData map[string]interface{}) string {
+func StartVerification(inputData map[string]interface{}) (string, error) {
 
-	if inputData["phone_number"] != nil {
+	if inputData["user"] == nil {
 		ver := db.GetInstance().Verification.GetVerification(inputData["phone_number"].(string))
-		hasUser, err := db.GetInstance().Customers.HasCustomer(inputData["phone_number"].(string))
-		if err != nil {
-			log.Println(err)
-			return myErrors[dbError]
-		}
 
-		if ver != nil || hasUser {
-			return myErrors[verificationExists]
+		if ver != nil {
+			return my_errors.GetError(my_errors.VerificationExists)
 		} else {
 			err := db.GetInstance().Verification.CreateVerification(inputData["phone_number"].(string),
-				rand.Int63n(100000),time.Now().Format("Mon Jan _2 15:04:05 MST 2006"))
+				services.GetRandom(10000, 99999), time.Now().Format("Mon Jan _2 15:04:05 MST 2006"))
 			if err != nil {
-				log.Println(err)
-				return myErrors[dbError]
+				return my_errors.GetError(my_errors.DBError)
 			} else {
-				return successfullyOperation()
+				return my_errors.SuccessfullyOperation()
 			}
 		}
 	} else {
-		return myErrors[argumentsError]
+		return my_errors.GetError(my_errors.UserAlreadyExists)
 	}
-
 }
 
 
-func VerifyPhone(inputData map[string]interface{}) string {
+func VerifyPhone(inputData map[string]interface{}) (string, error) {
 
-	if inputData["phone_number"] != nil && inputData["verification_code"] != nil {
+	if inputData["user"] == nil {
 		data := db.GetInstance().Verification.GetVerification(inputData["phone_number"].(string))
 		if data != nil && data.IsVerified == false {
 			isVerified := false
 
 			parsedTime, err := time.Parse("Mon Jan _2 15:04:05 MST 2006", data.StartTime)
 			if err != nil {
-				log.Println(err)
-				return myErrors[dateParsingError]
+				return my_errors.GetError(my_errors.DateParsingError)
 			}
 
-			//log.Println("parsed time:", parsedTime.String(), "current time:", time.Now().String())
-
 			elapsedTime := time.Now().Sub(parsedTime)
-			log.Println("elapsedTime:", elapsedTime.String())
-			log.Println("1:", elapsedTime.Hours())
-			if elapsedTime.Minutes() > 5 || (elapsedTime.Minutes() == 5 && elapsedTime.Seconds() > 0) {
+			if elapsedTime.Minutes() > 5 {
 				db.GetInstance().DeleteVerification(inputData["phone_number"].(string))
-				return myErrors[verificationTimeOutError]
+				return my_errors.GetError(my_errors.DateParsingError)
 			} else {
-				parsedVerificationCode, err := strconv.ParseInt(inputData["verification_code"].(string), 10, 64)
-				if err != nil {
-					log.Println(err)
-					return myErrors[jsonMarshalError]
-				}
-
+				parsedVerificationCode := int64(inputData["verification_code"].(float64))
 				if data.VerificationCode == parsedVerificationCode {
 					err = db.GetInstance().Verify(inputData["phone_number"].(string))
 					if err != nil {
-						log.Println(err)
-						return myErrors[dbError]
+						return my_errors.GetError(my_errors.DBError)
 					}
 					isVerified = true
 				}
@@ -80,12 +61,13 @@ func VerifyPhone(inputData map[string]interface{}) string {
 					"is_verified": isVerified,
 					"status":      "ok",
 				})
-				return string(response)
+				return string(response), nil
 			}
+
 		} else {
-			return myErrors[verificationNotExists]
+			return my_errors.GetError(my_errors.VerificationNotExists)
 		}
 	} else {
-		return myErrors[argumentsError]
+		return my_errors.GetError(my_errors.UserAlreadyExists)
 	}
 }
