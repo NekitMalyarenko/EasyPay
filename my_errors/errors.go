@@ -26,6 +26,7 @@ const(
 	NoSuchMethodError        = 16
 	UserAlreadyExists        = 17
 	WrongAccountType         = 18
+	SellerAlreadyAdded       = 19
 )
 
 var Errors myErrorsType
@@ -51,6 +52,7 @@ func init() {
 		16 : errorToJson(16, "no such method"),
 		17 : errorToJson(17, "user already exists"),
 		18 : errorToJson(18, "wrong account type"),
+		19 : errorToJson(19,"there's already seller with such id"),
 	}
 }
 

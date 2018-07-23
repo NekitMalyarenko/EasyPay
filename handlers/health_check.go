@@ -1,14 +1,8 @@
 package handlers
 
-import "log"
+import "my_errors"
 
 
-func Health(inputData map[string]interface{}) string{
-	result:= inputData["temp"].(string)
-	if result != "" {
-		return result
-	} else {
-		log.Println("Nothing in temp")
-		return ""
-	}
+func HealthCheck(inputData map[string]interface{}) (string, error) {
+	return my_errors.SuccessfullyOperation()
 }

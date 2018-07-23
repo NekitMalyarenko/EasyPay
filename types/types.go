@@ -48,8 +48,11 @@ type Shop struct {
 	Id          int64  `db:"id,omitempty"`
 	Name        string `db:"name"`
 	Description string `db:"description"`
+	Image 		string `db:"image"`
 	Likes       int	   `db:"likes"`
 	Dislikes    int	   `db:"dislikes"`
+	CardNumber  int64  `db:"card_number"`
+	Email       string `db:"email"`
 	RowSellers  string `db:"sellers"`
 	RowProducts string `db:"products"`
 }
@@ -57,6 +60,6 @@ type Shop struct {
 type Product struct {
 	Id    int64  `json:"id"`
 	Name  string `json:"name"`
-	Price string `json:"price"`
+	Price int    `json:"price"`
 	Image string `json:"image"`
 }

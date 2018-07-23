@@ -1,20 +1,26 @@
-package src
+package main
 
 import (
 	"db"
 	"net/http"
 	"io/ioutil"
 	"log"
-	"my_errors"
 	"encoding/json"
 	"types"
-	"errors"
 	myHandlers "handlers"
+	"my_errors"
 )
 
 
 type handler struct {
-	method                 func (input map[string]interface{}) (string, error)
+	method func (input map[string]interface{}) (string, error)
+	requirements           []string
+	requiresAuthentication bool
+	requiresUser           bool
+}
+
+type fileHandler struct {
+	method func (input map[string]interface{}, rawFile []byte) (string, error)
 	requirements           []string
 	requiresAuthentication bool
 	requiresUser           bool
@@ -23,7 +29,7 @@ type handler struct {
 
 var handlers map[string]*handler
 
-var rawMethodHandlers map[string]func(input map[string]interface{}, rawData []byte)string
+var fileHandlers  map[string]*fileHandler
 
 
 func main() {
@@ -31,17 +37,18 @@ func main() {
 	initRawHandlers()
 
 	db.GetInstance()
+	defer db.GetInstance().CloseConnection()
 
-	http.HandleFunc("/", Handle)
-
-	//http.HandleFunc("/raw", RawHandle)
-	//http.ListenAndServe(":8080", nil)
+	http.HandleFunc("/", MainHandler)
+	http.HandleFunc("/files", FileHandler)
+	http.ListenAndServe(":8080", nil)
 
 	//services.SendSMS("test", "380967519036")
 }
 
 
-func Handle(w http.ResponseWriter, r *http.Request) {
+func MainHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 	input, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -49,7 +56,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(my_errors.Errors[my_errors.CantReadBody].Error()))
 		return
 	}
-	defer r.Body.Close()
 
 	var parsedInput map[string]interface{}
 	err = json.Unmarshal(input, &parsedInput)
@@ -67,11 +73,15 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 		handler := handlers[methodName]
 		var (
 			methodData map[string]interface{}
-			user       *types.User
+			user *types.User
 		)
 
 		if handler != nil {
-			methodData = parsedInput["method_data"].(map[string]interface{})
+			if parsedInput["method_data"] != nil {
+				methodData = parsedInput["method_data"].(map[string]interface{})
+			} else {
+				methodData = make(map[string]interface{})
+			}
 
 			if handler.requiresAuthentication {
 				handler.requirements = append(handler.requirements, "phone_number")
@@ -84,7 +94,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				if !handler.checkRequirements(methodData) {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte(my_errors.Errors[my_errors.ArgumentsError].Error()))
-					return
 				}
 			}
 
@@ -93,7 +102,6 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 				if user == nil {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte(my_errors.Errors[my_errors.AuthenticationError].Error()))
-					return
 				} else if handler.requiresUser {
 					methodData["user"] = user
 				}
@@ -110,77 +118,158 @@ func Handle(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				w.WriteHeader(http.StatusBadRequest)
 				w.Write([]byte(err.Error()))
+				log.Println("error:", err.Error())
 				return
 			}
 
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(response))
+			log.Println("response:", response)
 			return
+
 		} else {
+			log.Println(my_errors.Errors[my_errors.NoSuchMethodError].Error())
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(my_errors.Errors[my_errors.NoSuchMethodError].Error()))
 		}
 
 	} else {
+		log.Println(my_errors.Errors[my_errors.MethodNameIsEmpty].Error())
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(my_errors.Errors[my_errors.MethodNameIsEmpty].Error()))
 		return
 	}
-
-	//w.WriteHeader(200)
 }
 
 
-func RawHandle(w http.ResponseWriter, r *http.Request) {
-	file, _, err := r.FormFile("image")
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-	}
+func FileHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	rawFile, err := ioutil.ReadAll(file)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-	}
-	log.Println(len(rawFile))
-
-	var parsedMethodData map[string]interface{}
-	err = json.Unmarshal([]byte(r.FormValue("method_data")), &parsedMethodData)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("json parsing error"))
-		return
-	}
-
-	if parsedMethodData["method_name"] != nil {
-		methodName := parsedMethodData["method_name"].(string)
-		var methodData = parsedMethodData["method_data"].(map[string]interface{})
-
-		if rawMethodHandlers[methodName] != nil {
-			response := rawMethodHandlers[methodName](methodData, rawFile)
-			log.Println("response:", response)
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(response))
-		} else {
-			log.Println(errors.New("no such method error"))
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("no such method error"))
+	if len(r.FormValue("method_data")) != 0 {
+		var parsedInput map[string]interface{}
+		err := json.Unmarshal([]byte(r.FormValue("method_data")), &parsedInput)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(my_errors.Errors[my_errors.JsonUnmarshalError].Error()))
 			return
 		}
+		log.Println("New connection with input data:", parsedInput)
+
+		file, headers, err := r.FormFile("file")
+		if err != nil {
+			log.Println("1", err)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		log.Println("headers:", headers.Header)
+
+		rawFile, err := ioutil.ReadAll(file)
+		if err != nil {
+			log.Println("2", err)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		if parsedInput["method_name"] != nil {
+			methodName := parsedInput["method_name"].(string)
+			handler := fileHandlers[methodName]
+			var (
+				methodData map[string]interface{}
+				user *types.User
+			)
+
+			if handler != nil {
+				if parsedInput["method_data"] != nil {
+					methodData = parsedInput["method_data"].(map[string]interface{})
+				} else {
+					methodData = make(map[string]interface{})
+				}
+
+				if parsedInput["method_data"] != nil {
+					methodData = parsedInput["method_data"].(map[string]interface{})
+				} else {
+					methodData = make(map[string]interface{})
+				}
+
+				if handler.requiresAuthentication {
+					handler.requirements = append(handler.requirements, "phone_number")
+					handler.requirements = append(handler.requirements, "password")
+				} else if handler.requiresUser {
+					handler.requirements = append(handler.requirements, "phone_number")
+				}
+
+				if len(handler.requirements) != 0 {
+					if !handler.checkRequirements(methodData) {
+						w.WriteHeader(http.StatusBadRequest)
+						w.Write([]byte(my_errors.Errors[my_errors.ArgumentsError].Error()))
+					}
+				}
+
+				if handler.requiresAuthentication {
+					user = authenticateUser(methodData)
+					if user == nil {
+						w.WriteHeader(http.StatusBadRequest)
+						w.Write([]byte(my_errors.Errors[my_errors.AuthenticationError].Error()))
+					} else if handler.requiresUser {
+						methodData["user"] = user
+					}
+				}
+
+				if handler.requiresUser && !handler.requiresAuthentication {
+					user = getUser(methodData)
+					if user != nil {
+						methodData["user"] = user
+					}
+				}
+
+				response, err := handler.method(methodData, rawFile)
+				if err != nil {
+					log.Println("error:", err.Error())
+					w.WriteHeader(http.StatusBadRequest)
+					w.Write([]byte(err.Error()))
+					return
+				}
+
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte(response))
+				log.Println("response:", response)
+				return
+
+			} else {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(my_errors.Errors[my_errors.NoSuchMethodError].Error()))
+			}
+
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(my_errors.Errors[my_errors.MethodNameIsEmpty].Error()))
+			return
+		}
+
 	} else {
-		log.Println(errors.New("method_name is empty error"))
+		log.Println(my_errors.Errors[my_errors.ArgumentsError].Error())
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("method_name is empty error"))
+		w.Write([]byte(my_errors.Errors[my_errors.ArgumentsError].Error()))
 		return
 	}
-
 }
 
 
 func (handler *handler) checkRequirements(inputData map[string]interface{}) bool {
+	for _, requirement := range handler.requirements {
+		if inputData[requirement] == nil {
+			return false
+		}
+	}
+
+	return true
+}
+
+
+func (handler *fileHandler) checkRequirements(inputData map[string]interface{}) bool {
 	for _, requirement := range handler.requirements {
 		if inputData[requirement] == nil {
 			return false
@@ -245,6 +334,10 @@ func getUser(inputData map[string]interface{}) *types.User {
 func initHandlers() {
 	handlers = make(map[string]*handler)
 
+	handlers["healthCheck"] = &handler{
+		method : myHandlers.HealthCheck,
+	}
+
 	handlers["userLogin"] = &handler{
 		method : myHandlers.UserLogin,
 		requirements : []string{},
@@ -281,15 +374,64 @@ func initHandlers() {
 		requiresAuthentication : true,
 		requiresUser : true,
 	}
+	handlers["getOldestTransactions"] = &handler{
+		method : myHandlers.GetOldestTransactions,
+		requirements : []string{"transaction_id", "number_of_transactions"},
+		requiresAuthentication : true,
+		requiresUser : true,
+	}
+	handlers["getNewestTransactions"] = &handler{
+		method : myHandlers.GetNewestTransactions,
+		requirements : []string{"last_transaction_id"},
+		requiresAuthentication : true,
+		requiresUser : true,
+	}
+	handlers["getTransactionById"] = &handler{
+		method : myHandlers.GetTransactionById,
+		requirements : []string{"transaction_id"},
+		requiresAuthentication: true,
+	}
 
-	/*
-	methodHandlers["getTransactionById"] = handlers.GetTransactionById
-	methodHandlers["getNewestTransactions"] = handlers.GetNewestTransactions
-	methodHandlers["getOldestTransactions"] = handlers.GetOldestTransactions*/
+	handlers["shopRegister"] = &handler{
+		method : myHandlers.ShopRegister,
+		requirements : []string{"shop"},
+		requiresAuthentication : true,
+		requiresUser : true,
+	}
+	handlers["shopAddSeller"] = &handler{
+		method : myHandlers.ShopAddSeller,
+		requirements : []string{"seller"},
+		requiresAuthentication : true,
+		requiresUser : true,
+	}
+	handlers["shopAddProducts"] = &handler{
+		method : myHandlers.ShopAddProducts,
+		requirements : []string{"products"},
+		requiresAuthentication : true,
+		requiresUser : true,
+	}
+	handlers["getShop"] = &handler{
+		method : myHandlers.GetShop,
+		requirements : []string{"shop_id"},
+	}
+	handlers["getShopCardNumber"] = &handler{
+		method : myHandlers.GetShopCardNumber,
+		requirements : []string{"shop_id"},
+		requiresAuthentication : true,
+	}
+	handlers["getShopProducts"] = &handler{
+		method : myHandlers.GetShopProducts,
+		requirements : []string{"shop_id"},
+	}
 }
 
 
 func initRawHandlers() {
-	rawMethodHandlers = make(map[string]func(input map[string]interface{}, rawData []byte)string)
-	//rawMethodHandlers["testUpload"] = handlers.TestPhoto
+	fileHandlers = make(map[string]*fileHandler)
+
+	fileHandlers["addCustomerImage"] = &fileHandler{
+		method : myHandlers.AddCustomerImage,
+		requiresAuthentication : true,
+		requiresUser : true,
+	}
 }

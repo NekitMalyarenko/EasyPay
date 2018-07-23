@@ -7,23 +7,24 @@ import (
 	"time"
 	"my_errors"
 	"services"
-)
-
-
-const(
-	CustomerAccount = 0
-	SellerAccount   = 1
+	"errors"
 )
 
 
 type jsonTransaction struct {
-	Id               int64         `json:"id"`
-	UserId           int64         `json:"user_id"`
-	ShopId           int64         `json:"shop_id"`
-	Products         []interface{} `json:"products"`
-	TotalPrice       int           `json:"total_price"`
-	Date             string        `json:"date"`
-	VerificationCode int64         `json:"verification_code"`
+	Id               int64            `json:"id"`
+	UserId           int64            `json:"user_id"`
+	ShopId           int64            `json:"shop_id"`
+	Products         []*jsonProduct `json:"products"`
+	TotalPrice       int              `json:"total_price"`
+	Date             string           `json:"date"`
+	VerificationCode int64            `json:"verification_code"`
+}
+
+
+type jsonProduct struct {
+	types.Product
+	Quantity     int `json:"quantity"`
 }
 
 
@@ -32,18 +33,17 @@ func AddTransaction(inputData map[string]interface{}) (string, error) {
 
 	if customer != nil {
 		rowTransaction := inputData["transaction"].(map[string]interface{})
-		shopId := int64(inputData["shop_id"].(float64))
-
-		marshaledProducts, err := json.Marshal(rowTransaction["products"].([]interface{}))
+		shop, err := db.GetInstance().GetShopById(int64(inputData["shop_id"].(float64)))
 		if err != nil {
-			return my_errors.GetError(my_errors.JsonMarshalError)
+			return "", err
 		}
+		products := productsFromString(rowTransaction["products"].([]interface{}))
 
 		transaction := types.Transaction{
 			UserId:     customer.Id,
-			ShopId:     shopId,
-			Products:   string(marshaledProducts),
-			TotalPrice: countTotalPrice(rowTransaction["products"].([]interface{})),
+			ShopId:     shop.Id,
+			Products:   productsToString(products),
+			TotalPrice: countTotalPrice(shop, products),
 			Date:       time.Now().Format("02.01.2006 15:04:05 -0700"),
 			VerificationCode : services.GetRandom(10000, 99999),
 		}
@@ -61,166 +61,115 @@ func AddTransaction(inputData map[string]interface{}) (string, error) {
 }
 
 
-/*
-func GetOldestTransactions(inputData map[string]interface{}) string {
-	if inputData["phone_number"] != nil && inputData["password"] != nil &&
-		inputData["account_type"] != nil && inputData["transaction_id"] != nil &&
-		inputData["number_of_transactions"] != nil{
+func GetOldestTransactions(inputData map[string]interface{}) (string,error) {
 
-		userId, ok, err := getUserId(inputData["phone_number"].(string), inputData["password"].(string),
-			int(inputData["account_type"].(float64)))
+	user := inputData["user"].(*types.User)
+	var(
+		dbTransactions []*types.Transaction
+		err error
+	)
+
+	if user.Customer != nil && user.Seller == nil {
+		dbTransactions, err = db.GetInstance().Transactions.GetOldestTransactions(user.Customer.Id,
+			int64(inputData["transaction_id"].(float64)),
+			int(inputData["number_of_transactions"].(float64)),false)
 		if err != nil {
-			log.Println(err)
-			return myErrors[dbError]
+			return my_errors.GetError(my_errors.DBError)
 		}
 
-		if ok {
-			transactionId := int64(inputData["transaction_id"].(float64))
-			numberOfTransactions := int(inputData["number_of_transactions"].(float64))
-
-			dbTransactions, err := db.GetInstance().Transactions.GetOldestTransactions(userId, transactionId,
-				numberOfTransactions)
-			if err != nil {
-				log.Println(err)
-				return myErrors[dbError]
-			}
-
-			transactions, err := parseDBTransactions(dbTransactions)
-			if err != nil {
-				log.Println(err)
-				return myErrors[jsonMarshalError]
-			}
-
-			response, _ := json.Marshal(map[string]interface{}{
-				"status" : "ok",
-				"transactions" : transactions,
-			})
-			return string(response)
-		} else {
-			return myErrors[authenticationError]
+	} else if user.Customer == nil && user.Seller != nil{
+		dbTransactions, err = db.GetInstance().Transactions.GetOldestTransactions(user.Seller.ShopId,
+			int64(inputData["transaction_id"].(float64)),
+			int(inputData["number_of_transactions"].(float64)),true)
+		if err != nil {
+			return my_errors.GetError(my_errors.DBError)
 		}
-	} else {
-		return myErrors[argumentsError]
+
 	}
+
+	transactions, err := parseDBTransactions(dbTransactions)
+	if err != nil {
+		return my_errors.GetError(my_errors.JsonMarshalError)
+	}
+
+	response, _ := json.Marshal(map[string]interface{}{
+		"status":       "ok",
+		"transactions": transactions,
+	})
+
+	return string(response), nil
 }
 
 
-func GetNewestTransactions(inputData map[string]interface{}) string {
+func GetNewestTransactions(inputData map[string]interface{}) (string,error) {
+	user := inputData["user"].(*types.User)
+	var(
+		dbTransactions []*types.Transaction
+		err error
+	)
 
-	if inputData["phone_number"] != nil && inputData["password"] != nil &&
-		inputData["account_type"] != nil && inputData["last_transaction_id"] != nil {
-
-		userId, ok, err := getUserId(inputData["phone_number"].(string), inputData["password"].(string),
-			int(inputData["account_type"].(float64)))
+	if user.Customer != nil && user.Seller == nil {
+		dbTransactions, err = db.GetInstance().Transactions.GetNewestTransactions(int64(inputData["last_transaction_id"].(float64)),
+			user.Customer.Id, false)
 		if err != nil {
-			log.Println(err)
-			return myErrors[dbError]
+			return my_errors.GetError(my_errors.DBError)
 		}
 
-		if ok {
-			lastTransactionId := int64(inputData["last_transaction_id"].(float64))
-			dbTransactions, err := db.GetInstance().Transactions.GetNewestTransactions(lastTransactionId, userId)
-			if err != nil {
-				log.Println(err)
-				return myErrors[dbError]
-			}
-
-			transactions, err := parseDBTransactions(dbTransactions)
-			if err != nil {
-				log.Println(err)
-				return myErrors[jsonMarshalError]
-			}
-
-			response, _ := json.Marshal(map[string]interface{}{
-				"status" : "ok",
-				"transactions" : transactions,
-			})
-			return string(response)
-		} else {
-			return myErrors[authenticationError]
+	} else if user.Customer == nil && user.Seller != nil {
+		dbTransactions, err = db.GetInstance().Transactions.GetNewestTransactions(int64(inputData["last_transaction_id"].(float64)),
+			user.Seller.ShopId, true)
+		if err != nil {
+			return my_errors.GetError(my_errors.DBError)
 		}
-	} else {
-		return myErrors[argumentsError]
+
 	}
+
+	transactions, err := parseDBTransactions(dbTransactions)
+	if err != nil {
+		return "", err
+	}
+
+	response, _ := json.Marshal(map[string]interface{}{
+		"status":       "ok",
+		"transactions": transactions,
+	})
+
+	return string(response), nil
 }
 
 
-func GetTransactionById(inputData map[string]interface{}) string {
-	if inputData["phone_number"] != nil && inputData["password"] != nil &&
-		inputData["account_type"] != nil && inputData["transaction_id"] != nil {
+func GetTransactionById(inputData map[string]interface{}) (string,error) {
 
-		userId, ok, err := getUserId(inputData["phone_number"].(string), inputData["password"].(string),
-			int(inputData["account_type"].(float64)))
-		if err != nil {
-			log.Println(err)
-			return myErrors[dbError]
-		}
+	transactionId := int64(inputData["transaction_id"].(float64))
 
-		if ok {
-			transactionId := int64(inputData["transaction_id"].(float64))
-
-			dbTransaction, err := db.GetInstance().Transactions.GetTransactionById(userId, transactionId)
-			if err != nil {
-				log.Println(err)
-				return myErrors[dbError]
-			}
-
-			var transaction = &jsonTransaction{}
-			if err = transaction.fromDBTransaction(dbTransaction); err != nil {
-				log.Println(err)
-				return myErrors[jsonMarshalError]
-			}
-
-			response, _ := json.Marshal(map[string]interface{}{
-				"status" : "ok",
-				"transaction" : transaction,
-			})
-			return string(response)
-		} else {
-			return myErrors[authenticationError]
-		}
-	} else {
-		return myErrors[argumentsError]
+	dbTransaction, err := db.GetInstance().Transactions.GetTransactionById(transactionId)
+	if err != nil {
+		return my_errors.GetError(my_errors.DBError)
 	}
+
+	var transaction= &jsonTransaction{}
+	if err = transaction.fromDBTransaction(dbTransaction); err != nil {
+		return my_errors.GetError(my_errors.JsonMarshalError)
+	}
+
+	response, _ := json.Marshal(map[string]interface{}{
+		"status":      "ok",
+		"transaction": transaction,
+	})
+
+	return string(response), nil
 }
 
 
-func getUserId(phoneNumber, password string, rowAccountType int) (int64, bool, error)   {
-	switch rowAccountType {
-		case CustomerAccount:
-			customer, err := db.GetInstance().Customers.GetCustomer(phoneNumber)
-			if err != nil {
-				return -1, false, err
-			} else if customer.Password == password {
-				return customer.Id, true, nil
-			} else {
-				return -1, false, nil
-			}
-		break
+func countTotalPrice(shop *types.Shop, products []jsonProduct) int {
+	parsedShop, _ := parseDBShop(shop)
 
-		case SellerAccount:
-			seller, err := db.GetInstance().Sellers.GetSeller(phoneNumber)
-			if err != nil {
-				return -1, false, err
-			} else if seller.Password == password {
-				return seller.ShopId, true, nil
-			} else {
-				return -1, false, nil
-			}
-		break
+	var totalPrice int
+	for _, rawProduct := range products {
+		product := parsedShop.getProduct(rawProduct.Id)
+		totalPrice += product.Price * rawProduct.Quantity
 	}
-
-	return -1, false, errors.New("unknown account type")
-}*/
-
-
-func countTotalPrice(products []interface{}) int {
-	/*var totalPrice int
-	for id, number := range products {
-		currentItem,_ := db.GetInstance().Products.GetPrice(id)
-		totalPrice +=currentItem*number
-	}*/
-	return 100
+	return totalPrice
 }
 
 
@@ -238,6 +187,36 @@ func parseDBTransactions(dbTransactions []*types.Transaction) ([]*jsonTransactio
 }
 
 
+func productsToString(products []jsonProduct) string {
+	res, _ := 	json.Marshal(products)
+	return string(res)
+}
+
+
+func productsFromString(rawProducts []interface{}) (products []jsonProduct) {
+	products = make([]jsonProduct, len(rawProducts))
+
+	for i, val := range rawProducts {
+		parsedVal := val.(map[string]interface{})
+
+		 jsonProduct := jsonProduct{
+		 	Quantity : int(parsedVal["quantity"].(float64)),
+		 }
+		 jsonProduct.Id = int64(parsedVal["id"].(float64))
+
+		products[i] = jsonProduct
+	}
+
+	return products
+}
+
+
+func (jsonTransaction *jsonTransaction) toString() string {
+	res, _ := 	json.Marshal(jsonTransaction)
+	return string(res)
+}
+
+
 func (jsonTransaction *jsonTransaction) fromDBTransaction(dbTransaction *types.Transaction) error {
 	jsonTransaction.Id = dbTransaction.Id
 	jsonTransaction.UserId = dbTransaction.UserId
@@ -245,5 +224,42 @@ func (jsonTransaction *jsonTransaction) fromDBTransaction(dbTransaction *types.T
 	jsonTransaction.TotalPrice = dbTransaction.TotalPrice
 	jsonTransaction.Date = dbTransaction.Date
 	jsonTransaction.VerificationCode = dbTransaction.VerificationCode
-	return json.Unmarshal([]byte(dbTransaction.Products), &jsonTransaction.Products)
+	return jsonTransaction.getExtendedProducts(dbTransaction)
+}
+
+
+func (jsonTransaction *jsonTransaction) getExtendedProducts(dbTransaction *types.Transaction) error {
+	err := json.Unmarshal([]byte(dbTransaction.Products), &jsonTransaction.Products)
+	if err != nil {
+		return err
+	}
+
+	dbShop, err := db.GetInstance().Shops.GetShopById(dbTransaction.ShopId)
+	if err != nil {
+		return err
+	}
+
+	shop := jsonShop{}
+	shop.fromDBShop(dbShop)
+	var getProduct = func(id int64) *types.Product {
+		for _, val := range shop.RowProducts {
+			if val.Id == id {
+				return &val
+			}
+		}
+
+		return nil
+	}
+
+	for _, val := range jsonTransaction.Products {
+		fullProduct := getProduct(val.Id)
+		if fullProduct != nil {
+			val.Price = fullProduct.Price
+			val.Name = fullProduct.Name
+		} else {
+			errors.New("can't find product")
+		}
+	}
+
+	return nil
 }

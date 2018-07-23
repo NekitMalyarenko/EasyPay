@@ -4,6 +4,7 @@ import (
 	"db"
 	"my_errors"
 	"types"
+	"services"
 )
 
 //Without image
@@ -35,26 +36,26 @@ func CustomerRegister(inputData map[string]interface{}) (string, error) {
 
 
 //email, password, image[]byte
-func CustomerAddImage(inputData map[string]interface{}, image []byte) string {
+func AddCustomerImage(inputData map[string]interface{}, image []byte) (string, error) {
+	user := inputData["user"].(*types.User)
+	var (
+		id       int64
+		fileName string
+		err      error
+	)
 
-	/*if inputData["phone_number"] != nil && inputData["password"] != nil && len(image) > 0{
-		customer, err := db.GetInstance().Customers.GetCustomer(inputData["phone_number"].(string))
-		if err != nil {
-			log.Println(err)
-			return myErrors[dbError]
-		}
+	if user.Customer != nil {
+		id = user.Customer.Id
+		fileName = user.Customer.FirstName + "_" + user.Customer.LastName + "_" + user.Customer.PhoneNumber
+	} else if user.Seller != nil {
+		id = user.Seller.Id
+		fileName = user.Seller.FirstName + "_" + user.Seller.LastName + "_" + user.Seller.PhoneNumber
+	}
 
-		if customer != nil && customer.Password == inputData["password"].(string) {
-
-			//services.UploadImage()
-
-		} else {
-			return myErrors[authenticationError]
-		}
-
+	imageLink := services.UploadImage(image, fileName)
+	if err = db.GetInstance().Customers.AddCustomerImage(id, imageLink); err != nil {
+		return "", err
 	} else {
-		return myErrors[argumentsError]
-	}*/
-
-	return ""
+		return my_errors.SuccessfullyOperation()
+	}
 }

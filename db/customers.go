@@ -6,6 +6,7 @@ import (
 	"upper.io/db.v3"
 )
 
+
 type Customers string
 
 
@@ -42,6 +43,19 @@ func (*Customers) AddCustomer(user *types.Customer) error {
 	_, err := currentInstance.instance.
 		InsertInto(customersTable).Values(user).Exec()
 	return err
+}
+
+
+func (*Customers) AddCustomerImage(id int64, image string) error {
+	q := currentInstance.instance.Update("users").
+		Set("image = ?", image).Where("id = ?", id)
+
+	_, err := q.Exec()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 

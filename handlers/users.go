@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"types"
+	"my_errors"
 )
 
 
@@ -30,7 +31,11 @@ func UserLogin(inputData map[string]interface{}) (string, error) {
 		})
 	}
 
-	return string(response), nil
+	if response == nil {
+		return my_errors.GetError(my_errors.UserNotFound)
+	}else {
+		return string(response), nil
+	}
 
 	/*if inputData["phone_number"] != nil && inputData["password"] != nil {
 		customer, err := db.GetInstance().Customers.GetCustomer(inputData["phone_number"].(string))

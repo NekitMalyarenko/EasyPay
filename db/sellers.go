@@ -55,3 +55,23 @@ func (db *Sellers) HasSeller(phoneNumber string) (bool, error) {
 		return false, nil
 	}
 }
+
+
+func (*Sellers) UpdateShopId(sellerId int64, shopId int64) error {
+	var seller *types.Seller
+	res := currentInstance.instance.Collection(sellersTable).Find("id",sellerId)
+
+	err := res.One(&seller)
+	if err != nil {
+		log.Println("cant find user with such id")
+		return err
+	}
+
+	seller.ShopId = shopId
+	err = res.Update(seller)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
