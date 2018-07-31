@@ -4,7 +4,10 @@ import (
 	"db"
 	"my_errors"
 	"types"
+	"encoding/json"
+	"log"
 )
+
 
 func SellerRegister(inputData map[string]interface{}) (string, error) {
 	isVerified, err := db.GetInstance().Verification.IsVerified(inputData["phone_number"].(string))
@@ -30,5 +33,30 @@ func SellerRegister(inputData map[string]interface{}) (string, error) {
 		}
 	} else {
 		return my_errors.GetError(my_errors.UnverifiedPhone)
+	}
+}
+
+
+func GetSeller(inputData map[string]interface{}) (string, error) {
+	sellerId := int64(inputData["seller_id"].(float64))
+
+	seller, err := db.GetInstance().Sellers.GetSellerById(sellerId)
+	if err != nil {
+		log.Println(err)
+		return my_errors.GetError(my_errors.DBError)
+	}
+
+	if seller != nil {
+		response, _ := json.Marshal(map[string]interface{}{
+			"status" : "ok",
+			"first_name" : seller.FirstName,
+			"last_name" : seller.LastName,
+			"description" : seller.Description,
+			"image" : seller.Image,
+		})
+
+		return string(response), nil
+	} else {
+		return my_errors.GetError(my_errors.UserNotFound)
 	}
 }

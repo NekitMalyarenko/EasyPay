@@ -3,7 +3,6 @@ package db
 import (
 	"upper.io/db.v3"
 	"types"
-	"log"
 )
 
 type Shops string
@@ -21,7 +20,6 @@ func (*Shops) GetShopById(shopId int64)(*types.Shop ,error){
 	})
 	err := res.One(&shop)
 	if err != nil {
-		log.Println("test")
 		return nil, err
 	}
 	return shop, nil
@@ -69,7 +67,7 @@ func (*Shops) UpdateProducts(products string,shopId int64) error{
 }
 
 
-func (*Shops) UpdateSellers(sellers string,shopId int64) error{
+func (*Shops) UpdateSellers(sellers string,shopId int64) error {
 	var shop *types.Shop
 	res := currentInstance.instance.Collection(shopsTable).Find("id",shopId)
 
@@ -85,4 +83,32 @@ func (*Shops) UpdateSellers(sellers string,shopId int64) error{
 	}
 
 	return nil
+}
+
+
+func (*Shops) AddDislikes(dislikesNumber int, shopId int64) error {
+	var shop *types.Shop
+
+	res := currentInstance.instance.Collection(shopsTable).Find(db.Cond{"id": shopId})
+	err := res.One(&shop)
+	if err != nil {
+		return err
+	}
+
+	shop.Dislikes += dislikesNumber
+	return res.Update(shop)
+}
+
+
+func (*Shops) AddLikes(likesNumber int, shopId int64) error {
+	var shop *types.Shop
+
+	res := currentInstance.instance.Collection(shopsTable).Find(db.Cond{"id": shopId})
+	err := res.One(&shop)
+	if err != nil {
+		return err
+	}
+
+	shop.Likes += likesNumber
+	return res.Update(shop)
 }

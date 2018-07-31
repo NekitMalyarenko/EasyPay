@@ -49,6 +49,8 @@ func main() {
 
 func MainHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	w.Header().Set("Content-Type", "text/json; charset=UTF-8")
+
 	input, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Println(err)
@@ -94,6 +96,8 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 				if !handler.checkRequirements(methodData) {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte(my_errors.Errors[my_errors.ArgumentsError].Error()))
+					log.Println("Not enough arguments")
+					return
 				}
 			}
 
@@ -102,6 +106,8 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 				if user == nil {
 					w.WriteHeader(http.StatusBadRequest)
 					w.Write([]byte(my_errors.Errors[my_errors.AuthenticationError].Error()))
+					log.Println("Authentication Error")
+					return
 				} else if handler.requiresUser {
 					methodData["user"] = user
 				}
@@ -131,6 +137,7 @@ func MainHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(my_errors.Errors[my_errors.NoSuchMethodError].Error())
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(my_errors.Errors[my_errors.NoSuchMethodError].Error()))
+			return
 		}
 
 	} else {
@@ -367,6 +374,10 @@ func initHandlers() {
 		requirements : []string{"first_name", "last_name", "password",
 			"phone_number", "description"},
 	}
+	handlers["getSeller"] = &handler{
+		method : myHandlers.GetSeller,
+		requirements : []string{"seller_id"},
+	}
 
 	handlers["addTransaction"] = &handler{
 		method : myHandlers.AddTransaction,
@@ -422,6 +433,25 @@ func initHandlers() {
 	handlers["getShopProducts"] = &handler{
 		method : myHandlers.GetShopProducts,
 		requirements : []string{"shop_id"},
+	}
+
+	handlers["addLike"] = &handler{
+		method: myHandlers.AddLike,
+		requirements: []string{"shop_id"},
+		requiresAuthentication: true,
+		requiresUser: true,
+	}
+	handlers["addDislike"] = &handler{
+		method: myHandlers.AddDislike,
+		requirements: []string{"shop_id"},
+		requiresAuthentication: true,
+		requiresUser: true,
+	}
+	handlers["getUserRating"] = &handler{
+		method: myHandlers.AddDislike,
+		requirements: []string{"shop_id"},
+		requiresAuthentication: true,
+		requiresUser: true,
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 	"types"
 	"encoding/json"
 	"my_errors"
+	"log"
 )
 
 
@@ -123,6 +124,7 @@ func GetShop(inputData map[string]interface{}) (string, error) {
 	shopId := int64(inputData["shop_id"].(float64))
 	dbShop, err := db.GetInstance().Shops.GetShopById(shopId)
 	if err != nil {
+		log.Println(err)
 		return my_errors.GetError(my_errors.DBError)
 	}
 
@@ -155,6 +157,7 @@ func GetShopProducts(inputData map[string]interface{}) (string, error) {
 	shopId := int64(inputData["shop_id"].(float64))
 	dbShop, err := db.GetInstance().Shops.GetShopById(shopId)
 	if err != nil {
+		log.Println(err)
 		return my_errors.GetError(my_errors.DBError)
 	}
 

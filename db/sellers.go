@@ -38,6 +38,28 @@ func (*Sellers) GetSeller(phoneNumber string) (*types.Seller, error) {
 }
 
 
+func (*Sellers) GetSellerById(id int64) (*types.Seller, error) {
+	var user *types.Seller
+
+	res := currentInstance.instance.Collection(sellersTable).Find(db.Cond{"id": id})
+	has, err := res.Exists()
+	if err != nil {
+		return nil, err
+	}
+
+	if has {
+		err = res.One(&user)
+		if err != nil {
+			return nil, err
+		}
+
+		return user, nil
+	} else {
+		return nil, nil
+	}
+}
+
+
 func (*Sellers) AddSeller(seller *types.Seller) error {
 	_, err := currentInstance.instance.
 		InsertInto(sellersTable).Values(seller).Exec()

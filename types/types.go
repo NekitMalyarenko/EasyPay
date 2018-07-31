@@ -63,3 +63,10 @@ type Product struct {
 	Price int    `json:"price"`
 	Image string `json:"image"`
 }
+
+type Rating struct {
+	Id     int64  `db:"id,omitempty"`
+	UserId int64  `db:"user_id"`
+	ShopId int64  `db:"shop_id"`
+	Action string `db:"action"`
+}

@@ -15,6 +15,7 @@ type dbService struct {
 	Verification
 	Transactions
 	Shops
+	Ratings
 }
 
 
