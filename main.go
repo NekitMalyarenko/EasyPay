@@ -9,6 +9,13 @@ import (
 	"types"
 	myHandlers "handlers"
 	"my_errors"
+	"local_storage"
+	"strings"
+)
+
+
+const (
+	liqpayServerAddress = "54.229.105.178"
 )
 
 
@@ -33,30 +40,84 @@ var fileHandlers  map[string]*fileHandler
 
 
 func main() {
+	//localhost:8080/api?data=%7B%22method_data%22%3A%7B%22password%22%3A%221234%22%2C%22phone_number%22%3A%22380967519036%22%2C%22products%22%3A%5B%7B%22id%22%3A1%2C%22quantity%22%3A2%7D%2C%7B%22id%22%3A2%2C%22quantity%22%3A4%7D%5D%2C%22shop_id%22%3A23%7D%2C%22method_name%22%3A%22pay%22%7D
 	initHandlers()
 	initRawHandlers()
 
 	db.GetInstance()
 	defer db.GetInstance().CloseConnection()
 
-	http.HandleFunc("/", MainHandler)
+	local_storage.GetInstance()
+
+	http.HandleFunc("/api", MainHandler)
 	http.HandleFunc("/files", FileHandler)
+	http.HandleFunc("/callback", LiqpayCallbackHandler)
+	http.HandleFunc("/test", func(writer http.ResponseWriter, request *http.Request) {
+			writer.Write([]byte("<h1>Hello World!</h1>"))
+	})
 	http.ListenAndServe(":8080", nil)
 
+	/*u, err := url.Parse("localhost:8080/")
+	if err != nil {
+		log.Fatal(err)
+	}
+	q := u.Query()
+	parsedData, _ := json.Marshal(map[string]interface{}{
+		"method_data" : map[string]interface{}{
+			"shop_id" : 23,
+			"products" : []map[string]interface{}{
+				{
+					"id" : 1,
+					"quantity" : 2,
+				},
+				{
+					"id" : 2,
+					"quantity" : 4,
+				},
+			},
+
+			"phone_number" : "380967519036",
+			"password" : "1234",
+		},
+		"method_name" : "pay",
+	})
+	q.Set("data", string(parsedData))
+	u.RawQuery = q.Encode()
+	fmt.Println(u)*/
 	//services.SendSMS("test", "380967519036")
+}
+
+
+func LiqpayCallbackHandler(w http.ResponseWriter, r *http.Request) {
+	ip := []byte(r.RemoteAddr)[:strings.Index(r.RemoteAddr, ":")]
+
+	if r.Method == "POST" && string(ip) == liqpayServerAddress {
+		myHandlers.CheckAllPayments()
+	} else {
+		log.Println("DENIED", string(ip))
+	}
 }
 
 
 func MainHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	w.Header().Set("Content-Type", "text/json; charset=UTF-8")
+	log.Println("METHOD:", r.Method, "from:", r.RemoteAddr)
 
-	input, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(my_errors.Errors[my_errors.CantReadBody].Error()))
-		return
+	var (
+		input []byte
+		err   error
+	)
+
+	if r.Method == "POST" {
+		input, err = ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(my_errors.Errors[my_errors.CantReadBody].Error()))
+			return
+		}
+	} else if r.Method == "GET" {
+		input = []byte(r.URL.Query().Get("data"))
 	}
 
 	var parsedInput map[string]interface{}
@@ -402,6 +463,11 @@ func initHandlers() {
 		requirements : []string{"transaction_id"},
 		requiresAuthentication: true,
 	}
+	handlers["getProductImage"] = &handler{
+		method : myHandlers.GetTransactionById,
+		requirements : []string{"transaction_id", "product_id"},
+		requiresAuthentication: true,
+	}
 
 	handlers["shopRegister"] = &handler{
 		method : myHandlers.ShopRegister,
@@ -448,10 +514,17 @@ func initHandlers() {
 		requiresUser: true,
 	}
 	handlers["getUserRating"] = &handler{
-		method: myHandlers.AddDislike,
+		method: myHandlers.GetRating,
 		requirements: []string{"shop_id"},
 		requiresAuthentication: true,
 		requiresUser: true,
+	}
+
+	handlers["pay"] = &handler{
+		method: myHandlers.Pay,
+		requirements: []string{"shop_id", "products"},
+		requiresAuthentication: true,
+		requiresUser : true,
 	}
 }
 

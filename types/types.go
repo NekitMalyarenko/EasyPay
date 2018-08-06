@@ -36,12 +36,12 @@ type Verification struct {
 
 type Transaction struct {
 	Id               int64  `db:"id,omitempty"`
-	UserId           int64  `db:"user_id"`
-	ShopId           int64  `db:"shop_id"`
-	Products         string `db:"products"`
-	TotalPrice       int    `db:"total_price"`
-	Date             string `db:"date"`
-	VerificationCode int64  `db:"verification_code"`
+	UserId           int64  `db:"user_id"           json:"user_id"`
+	ShopId           int64  `db:"shop_id"           json:"shop_id"`
+	Products         string `db:"products"          json:"products"`
+	TotalPrice       int    `db:"total_price"       json:"total_price"`
+	Date             string `db:"date"              json:"date"`
+	VerificationCode int64  `db:"verification_code" json:"verification_code"`
 }
 
 type Shop struct {
@@ -69,4 +69,9 @@ type Rating struct {
 	UserId int64  `db:"user_id"`
 	ShopId int64  `db:"shop_id"`
 	Action string `db:"action"`
+}
+
+type PaymentData struct {
+	Id int64 `json:"id"`
+	Transaction
 }

@@ -6,6 +6,8 @@ import (
 	"my_errors"
 	"encoding/json"
 	"services"
+	"log"
+	"strconv"
 )
 
 
@@ -17,8 +19,15 @@ func StartVerification(inputData map[string]interface{}) (string, error) {
 		if ver != nil {
 			return my_errors.GetError(my_errors.VerificationExists)
 		} else {
-			err := db.GetInstance().Verification.CreateVerification(inputData["phone_number"].(string),
-				services.GetRandom(10000, 99999), time.Now().Format("Mon Jan _2 15:04:05 MST 2006"))
+			verificationCode := services.GetRandom(10000, 99999)
+
+			err := services.SendSMS(strconv.FormatInt(verificationCode, 10), inputData["phone_number"].(string))
+			if err != nil {
+				log.Println(err)
+			}
+
+			err = db.GetInstance().Verification.CreateVerification(inputData["phone_number"].(string),
+				verificationCode, time.Now().Format("Mon Jan _2 15:04:05 MST 2006"))
 			if err != nil {
 				return my_errors.GetError(my_errors.DBError)
 			} else {

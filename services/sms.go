@@ -1,29 +1,29 @@
 package services
 
 import (
-	"gopkg.in/njern/gonexmo.v2"
+	"github.com/plivo/plivo-go"
+	"log"
 )
 
 const(
-	apikey   = "7c4a13eb"
-	apiSecret = "hJ11W6WwJRvvjvF8"
-	userName = "n.a.m.62608@gmail.com"
-	password = "Zikim62608"
-	sender   = "EasyPay"
+	token = "NGE2YThlNTVmODlkMDcwNGFlMTlkNzcxODkzOWE2"
+	id    = "MANDZKMDBKYJAWMMY0YM"
 )
 
 
 func SendSMS(message, recipient string) error {
-	nexmoClient, _ := nexmo.NewClient(apikey, apiSecret)
-
-	sms := &nexmo.SMSMessage{
-		From            : sender,
-		To              : recipient,
-		Type            : nexmo.Text,
-		Text            : message,
-		Class           : nexmo.Standard,
+	client, err := plivo.NewClient(id, token, &plivo.ClientOptions{})
+	if err != nil {
+		return err
 	}
 
-	_, err := nexmoClient.SMS.Send(sms)
+	log.Println(recipient)
+
+	_, err = client.Messages.Create(plivo.MessageCreateParams{
+		Src: "380506260859",
+		Dst: recipient,
+		Text: message,
+	})
+
 	return err
 }

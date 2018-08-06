@@ -80,3 +80,14 @@ func (*Transactions) GetNewestTransactions(lastTransactionId, userId int64,isSel
 
 	return transactions, nil
 }
+
+
+func (*Transactions) GetBiggestId() (int64, error) {
+	var transaction *types.Transaction
+	err := currentInstance.instance.SelectFrom(transactionsTable).Limit(1).OrderBy("-id").One(&transaction)
+	if err != nil {
+		return -1, err
+	} else {
+		return transaction.Id, nil
+	}
+}

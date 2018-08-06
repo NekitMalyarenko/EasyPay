@@ -32,12 +32,18 @@ func AddTransaction(inputData map[string]interface{}) (string, error) {
 	customer := inputData["user"].(*types.User).Customer
 
 	if customer != nil {
-		rowTransaction := inputData["transaction"].(map[string]interface{})
 		shop, err := db.GetInstance().GetShopById(int64(inputData["shop_id"].(float64)))
 		if err != nil {
 			return "", err
 		}
-		products := productsFromString(rowTransaction["products"].([]interface{}))
+
+		var rawProducts []interface{}
+		err = json.Unmarshal([]byte(inputData["products"].(string)), &rawProducts)
+		if err != nil {
+			return "", err
+		}
+
+		products := productsFromString(rawProducts)
 
 		transaction := types.Transaction{
 			UserId:     customer.Id,
@@ -61,7 +67,7 @@ func AddTransaction(inputData map[string]interface{}) (string, error) {
 }
 
 
-func GetOldestTransactions(inputData map[string]interface{}) (string,error) {
+func GetOldestTransactions(inputData map[string]interface{}) (string, error) {
 
 	user := inputData["user"].(*types.User)
 	var(
@@ -101,7 +107,7 @@ func GetOldestTransactions(inputData map[string]interface{}) (string,error) {
 }
 
 
-func GetNewestTransactions(inputData map[string]interface{}) (string,error) {
+func GetNewestTransactions(inputData map[string]interface{}) (string, error) {
 	user := inputData["user"].(*types.User)
 	var(
 		dbTransactions []*types.Transaction
@@ -138,7 +144,7 @@ func GetNewestTransactions(inputData map[string]interface{}) (string,error) {
 }
 
 
-func GetTransactionById(inputData map[string]interface{}) (string,error) {
+func GetTransactionById(inputData map[string]interface{}) (string, error) {
 
 	transactionId := int64(inputData["transaction_id"].(float64))
 
@@ -188,7 +194,16 @@ func parseDBTransactions(dbTransactions []*types.Transaction) ([]*jsonTransactio
 
 
 func productsToString(products []jsonProduct) string {
-	res, _ := 	json.Marshal(products)
+	var rawRes = make([]map[string]interface{}, len(products))
+
+	for index, val := range products {
+		rawRes[index] = map[string]interface{}{
+			"id" : val.Id,
+			"quantity" : val.Quantity,
+		}
+	}
+
+	res, _ := json.Marshal(rawRes)
 	return string(res)
 }
 
