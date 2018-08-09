@@ -23,10 +23,10 @@ var (
 	currentInstance *dbService
 
 	settings = postgresql.ConnectionURL{
-		Host:     "ec2-54-247-98-162.eu-west-1.compute.amazonaws.com",
-		Database: "df7qtm51mteljj",
-		User:     "uzoysoozzaqazl",
-		Password: "aa2f03f8e8b40ef7d893f95a91cd2d22a8d1e690ee6e6afbb254e5b0e4d43473",
+		Host:     "ec2-79-125-12-48.eu-west-1.compute.amazonaws.com",
+		Database: "dcpeust2o38fga",
+		User:     "ixuneudikjaefb",
+		Password: "e1119f3e0c0bdd0c5cad33dc8fb53470c1c69c0317743f03809725ec09b25f4a",
 		Options:map[string]string{"sslmode" : "require"},
 	}
 

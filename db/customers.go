@@ -39,6 +39,30 @@ func (*Customers) GetCustomer(phoneNumber string) (*types.Customer, error) {
 }
 
 
+func (*Customers) GetCustomerById(id int64) (*types.Customer, error) {
+	var user *types.Customer
+
+	res := currentInstance.instance.Collection(customersTable).Find(db.Cond{"id": id})
+	has, err := res.Exists()
+	if err != nil {
+		log.Println(err)
+		return nil, err
+	}
+
+	if has {
+		err := res.One(&user)
+		if err != nil {
+			log.Println(err)
+			return nil, err
+		}
+
+		return user, nil
+	} else {
+		return nil, nil
+	}
+}
+
+
 func (*Customers) AddCustomer(user *types.Customer) error {
 	_, err := currentInstance.instance.
 		InsertInto(customersTable).Values(user).Exec()

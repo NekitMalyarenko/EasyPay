@@ -41,10 +41,17 @@ func (*Shops) GetShopCardNumber(shopId int64) (int64,error){
 }
 
 
-func (*Shops) AddShop(shop types.Shop) error{
+func (*Shops) AddShop(shop types.Shop) error {
 	_, err := currentInstance.instance.
 		InsertInto(shopsTable).Values(shop).Exec()
 	return err
+}
+
+
+func (*Shops) UpdateShop(shop *types.Shop) error {
+	return currentInstance.instance.Collection(shopsTable).Find(db.Cond{
+		"id =" : shop.Id,
+	}).Update(shop)
 }
 
 

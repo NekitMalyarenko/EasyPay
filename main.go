@@ -9,8 +9,8 @@ import (
 	"types"
 	myHandlers "handlers"
 	"my_errors"
-	"local_storage"
 	"strings"
+	"local_storage"
 )
 
 
@@ -429,6 +429,10 @@ func initHandlers() {
 		requirements : []string{"first_name", "last_name", "password",
 			"phone_number"},
 	}
+	handlers["getCustomer"] = &handler{
+		method : myHandlers.GetCustomer,
+		requirements : []string{"customer_id"},
+	}
 
 	handlers["sellerRegister"] = &handler{
 		method : myHandlers.SellerRegister,
@@ -469,6 +473,13 @@ func initHandlers() {
 		requiresAuthentication: true,
 	}
 
+	handlers["updateShop"] = &handler{
+		method : myHandlers.UpdateShop,
+		requirements : []string{"shop_name",
+		"shop_email", "shop_des"},
+		requiresAuthentication : true,
+		requiresUser : true,
+	}
 	handlers["shopRegister"] = &handler{
 		method : myHandlers.ShopRegister,
 		requirements : []string{"shop"},

@@ -27,6 +27,7 @@ func UserLogin(inputData map[string]interface{}) (string, error) {
 			"last_name" : user.Seller.LastName,
 			"image" : user.Seller.Image,
 			"description" : user.Seller.Description,
+			"shop_id" : user.Seller.ShopId,
 			"account_type" : 1,
 		})
 	}

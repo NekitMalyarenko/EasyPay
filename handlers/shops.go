@@ -23,6 +23,31 @@ type jsonShop struct {
 }
 
 
+func UpdateShop(inputData map[string]interface{}) (string, error) {
+	seller := inputData["user"].(*types.User).Seller
+
+	shopName := inputData["shop_name"].(string)
+	shopEmail := inputData["shop_email"].(string)
+	shopDes := inputData["shop_des"].(string)
+
+	shop, err := db.GetInstance().Shops.GetShopById(seller.ShopId)
+	if err != nil {
+		return my_errors.GetError(my_errors.DBError)
+	}
+
+	shop.Name = shopName
+	shop.Description = shopDes
+	shop.Email = shopEmail
+
+	err = db.GetInstance().Shops.UpdateShop(shop)
+	if err != nil {
+		return my_errors.GetError(my_errors.DBError)
+	}
+
+	return my_errors.SuccessfullyOperation()
+}
+
+
 func ShopRegister(inputData map[string]interface{}) (string, error) {
 	seller := inputData["user"].(*types.User).Seller
 	inputShop := inputData["shop"].(map[string]interface{})
@@ -54,7 +79,7 @@ func ShopRegister(inputData map[string]interface{}) (string, error) {
 }
 
 
-func ShopAddProducts(inputData map[string]interface{})(string, error){
+func ShopAddProducts(inputData map[string]interface{}) (string, error){
 	seller := inputData["user"].(*types.User).Seller
 
 	dbShop, err := db.GetInstance().Shops.GetShopById(seller.ShopId)
@@ -67,7 +92,7 @@ func ShopAddProducts(inputData map[string]interface{})(string, error){
 		my_errors.GetError(my_errors.JsonUnmarshalError)
 	}
 
-	extendedProducts, err:= getExtendedProducts(inputData["products"].([]types.Product), shop.RowProducts)
+	extendedProducts, err := getExtendedProducts(inputData["products"].([]types.Product), shop.RowProducts)
 	if err != nil {
 		return my_errors.GetError(my_errors.JsonMarshalError)
 	}

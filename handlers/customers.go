@@ -5,6 +5,7 @@ import (
 	"my_errors"
 	"types"
 	"services"
+	"encoding/json"
 )
 
 //Without image
@@ -32,6 +33,26 @@ func CustomerRegister(inputData map[string]interface{}) (string, error) {
 	} else {
 		return my_errors.GetError(my_errors.UnverifiedPhone)
 	}
+}
+
+
+func GetCustomer(inputData map[string]interface{}) (string, error) {
+	userId := int64(inputData["customer_id"].(float64))
+
+	customer, err := db.GetInstance().Customers.GetCustomerById(userId)
+	if err != nil {
+		return my_errors.GetError(my_errors.DBError)
+	}
+
+	response, _ := json.Marshal(map[string]interface{}{
+		"status" : "ok",
+		"id" : customer.Id,
+		"first_name" : customer.FirstName,
+		"last_name" : customer.LastName,
+		"image" : customer.Image,
+	})
+
+	return string(response), nil
 }
 
 

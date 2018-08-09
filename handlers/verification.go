@@ -21,7 +21,7 @@ func StartVerification(inputData map[string]interface{}) (string, error) {
 		} else {
 			verificationCode := services.GetRandom(10000, 99999)
 
-			err := services.SendSMS(strconv.FormatInt(verificationCode, 10), inputData["phone_number"].(string))
+			err := services.SendSMS(inputData["phone_number"].(string), strconv.FormatInt(verificationCode, 10))
 			if err != nil {
 				log.Println(err)
 			}
